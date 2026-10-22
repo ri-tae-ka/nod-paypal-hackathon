@@ -1,0 +1,13 @@
+{
+  "name": "nod",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Plain-English purchase requests turned into an editable, versioned sheet by an AI agent, then paid with PayPal.",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "npm ci --include=dev --prefix client && npm run build --prefix client && npm ci --include=dev --prefix server && npm run build --prefix server",
+    "start": "npm start --prefix server"
+  }
+}
