@@ -1,0 +1,15 @@
+.page { max-width: 860px; margin: 0 auto; padding: 2.5rem 1rem 3rem; text-align: center; }
+.title {
+  display: inline-block;
+  margin: 0 0 2.75rem;
+  padding: 0 2.5rem 0.4rem;
+  font-size: 2rem;
+  color: var(--blue-800);
+  border-bottom: 2px solid var(--blue-800);
+}
+.body { display: grid; gap: 1.5rem; }
+.body p { margin: 0; font-size: 1.05rem; line-height: 1.75; color: var(--text); }
+.body strong { color: var(--text); }
+.brand { font-size: 1.25rem; font-weight: 700; color: var(--blue-800); }
+.highlight { font-size: 1.15rem; font-weight: 700; color: var(--blue-800); }
+.madeWith { margin: 4rem 0 0; color: var(--muted); }

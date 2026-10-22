@@ -1,0 +1,48 @@
+.wrapper { width: 100%; }
+.wrapper :global(.ag-center-cols-viewport) { min-height: 0 !important; }
+.wrapper :global(.ag-layout-auto-height .ag-center-cols-container) { min-height: 0 !important; }
+.wrapper :global(.ag-cell) { display: flex; align-items: center; }
+.wrapper :global(.ag-right-aligned-cell) { justify-content: flex-end; }
+.product { display: flex; gap: 0.75rem; align-items: center; padding: 0.4rem 0; line-height: 1.35; }
+.thumb {
+  width: 48px;
+  height: 48px;
+  flex: none;
+  object-fit: contain;
+  border-radius: 8px;
+  background: var(--blue-50);
+  border: 1px solid var(--border);
+}
+.productText { display: grid; min-width: 0; }
+.productText a {
+  color: var(--text);
+  font-weight: 600;
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.productText a:hover { color: var(--primary); text-decoration: underline; }
+.productText span { font-size: 0.82rem; }
+.oos { color: var(--danger); }
+.editable { background: var(--yellow-50); font-weight: 600; cursor: text; }
+.money { font-variant-numeric: tabular-nums; }
+.rationale { line-height: 1.4; padding-top: 0.5rem; padding-bottom: 0.5rem; color: var(--muted); font-size: 0.85rem; }
+.removeCell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 !important;
+  text-overflow: clip !important;
+}
+.remove {
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  font-size: 0.8rem;
+  color: var(--danger);
+  background: transparent;
+  border-color: transparent;
+}
+.remove:hover { background: #fdecea; border-color: #f5c6c2; }
+.totalRow { font-weight: 700; background: var(--blue-50) !important; }

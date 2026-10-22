@@ -1,0 +1,41 @@
+.panel {
+  display: grid;
+  gap: 0.75rem;
+  padding: 0.9rem 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.head { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; }
+.label { font-weight: 600; color: var(--blue-800); }
+.head select { width: auto; }
+.body { display: grid; gap: 0.6rem; }
+.body p { margin: 0; }
+.summary { font-size: 0.95rem; }
+.cheaper { color: var(--success); font-weight: 700; }
+.pricier { color: var(--danger); font-weight: 700; }
+.lines { display: grid; gap: 0.4rem; margin: 0; padding: 0; list-style: none; }
+.lines li {
+  display: grid;
+  grid-template-columns: 5.5rem minmax(0, 1fr) auto 7rem;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+.kind { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+.title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.detail { color: var(--muted); font-size: 0.85rem; white-space: nowrap; }
+.amount { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+.added { background: #e9f7ef; }
+.added .kind { color: var(--success); }
+.removed { background: #fdecea; }
+.removed .kind { color: var(--danger); }
+.removed .title { text-decoration: line-through; color: var(--muted); }
+.changed { background: var(--yellow-50); }
+.changed .kind { color: var(--yellow-800); }
+@media (max-width: 700px) {
+  .lines li { grid-template-columns: 1fr auto; }
+  .kind, .detail { grid-column: 1 / -1; }
+}
