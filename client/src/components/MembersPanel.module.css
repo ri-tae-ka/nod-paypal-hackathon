@@ -1,0 +1,13 @@
+.panel { display: grid; gap: 0.75rem; padding: 1.1rem 1.25rem; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; }
+.head { display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
+.head h2 { margin: 0; font-size: 1.05rem; color: var(--blue-800); }
+.invite { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.invite input { flex: 1; min-width: 14rem; }
+.list { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.5rem; }
+.list li { display: flex; align-items: center; gap: 0.75rem; }
+.avatar { width: 1.9rem; height: 1.9rem; border-radius: 50%; background: var(--blue-100); color: var(--blue-800); display: grid; place-items: center; font-weight: 700; font-size: 0.85rem; }
+.name { flex: 1; }
+.tag { margin-left: 0.5rem; font-style: normal; font-size: 0.7rem; padding: 0.1rem 0.45rem; border-radius: 999px; background: var(--yellow-100); color: var(--yellow-800); }
+.nodded { color: var(--success); font-weight: 600; font-size: 0.85rem; }
+.waiting { color: var(--muted); font-size: 0.85rem; }
+.linkBtn { border: none; background: none; color: var(--danger); padding: 0.2rem 0.4rem; }

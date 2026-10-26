@@ -1,0 +1,16 @@
+.wrapper { width: 100%; }
+.wrapper :global(.ag-cell) { display: flex; align-items: center; }
+.wrapper :global(.ag-right-aligned-cell) { justify-content: flex-end; font-variant-numeric: tabular-nums; }
+.wrapper :global(.ag-row-pinned) { font-weight: 700; background: var(--blue-50); }
+.rowAdded { background: #e9f7ef !important; }
+.rowRemoved { background: #fdecea !important; }
+.rowChanged { background: var(--yellow-50) !important; }
+.added { color: var(--success); font-weight: 700; }
+.removed { color: var(--danger); font-weight: 700; }
+.changed { color: var(--yellow-800); font-weight: 700; }
+.cheaper { color: var(--success); font-weight: 700; }
+.pricier { color: var(--danger); font-weight: 700; }
+.total { font-weight: 700; }
+.rowTotal { background: var(--blue-50) !important; }
+.wrapper :global(.ag-center-cols-viewport) { min-height: 0 !important; }
+.wrapper :global(.ag-layout-auto-height .ag-center-cols-container) { min-height: 0 !important; }
