@@ -16,9 +16,11 @@ const paymentSchema = new Schema(
     status: {
       type: String,
       // "capturing" guards against unapprove racing an in-flight capture
-      enum: ["created", "capturing", "completed", "pending", "failed", "cancelled"],
+      enum: ["created", "capturing", "completed", "pending", "failed", "cancelled", "refunded"],
       default: "created",
     },
+    refundId: String,
+    refundedAt: Date,
     payer: {
       email: String,
       payerId: String,

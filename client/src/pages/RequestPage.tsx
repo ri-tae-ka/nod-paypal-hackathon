@@ -1,14 +1,17 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { deleteRequest, getVersion, listVersions } from "../api/requests";
 import { AddProductDrawer } from "../components/AddProductDrawer";
 import { AgentPanel } from "../components/AgentPanel";
+import { MembersPanel } from "../components/MembersPanel";
 import { PaymentCard } from "../components/PaymentCard";
+import { PoolPanel, poolIsLive } from "../components/PoolPanel";
 import { SheetGrid } from "../components/SheetGrid";
 import { StatusBadge } from "../components/StatusBadge";
 import { VersionDiffPanel } from "../components/VersionDiffPanel";
 import { VersionTimeline } from "../components/VersionTimeline";
+import { useMe } from "../hooks/useAuth";
 import { useRequestWorkspace } from "../hooks/useRequestWorkspace";
 import { formatCents, formatDate } from "../lib/format";
 import type { GenerateResult, VersionItem } from "../types/api";
@@ -17,6 +20,7 @@ import styles from "./RequestPage.module.css";
 export function RequestPage() {
   const { id = "" } = useParams();
   const ws = useRequestWorkspace(id);
+  const { data: me } = useMe();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const closeDrawer = useCallback(() => setDrawerOpen(false), []);
   const [agentResult, setAgentResult] = useState<GenerateResult | null>(null);
@@ -66,12 +70,19 @@ export function RequestPage() {
   );
 
   const version = viewingOld ? (oldVersion.data ?? null) : latestVersion;
+  // The items shown last, so a freshly mounted grid (another version, or a just-filled sheet) can highlight changes.
+  const lastItems = useRef<VersionItem[] | null>(null);
+  useEffect(() => {
+    if (version) lastItems.current = version.items;
+  }, [version]);
   const existingIds = useMemo(() => new Set(version?.items.map((i) => i.channel3ProductId)), [version]);
 
   if (ws.query.isPending) return <p className="muted">Loading request…</p>;
   if (ws.query.error) return <p className="error">{ws.query.error.message}</p>;
 
   const { request } = ws.query.data;
+  const members = ws.query.data.members ?? [];
+  const pool = ws.query.data.pool ?? null;
   const editable = request.status === "draft" && !viewingOld;
   const budget = version?.budget ?? { budgetCents: request.budgetCents, remainingCents: null, overBudget: false };
   const total = version?.totalCents ?? 0;
@@ -109,7 +120,7 @@ export function RequestPage() {
           <h1 className={styles.prompt}>{request.prompt}</h1>
           <div className={styles.titleActions}>
             <StatusBadge status={request.status} />
-            {request.status !== "paid" && (
+            {request.status !== "paid" && !poolIsLive(pool) && (
               <button type="button" className="danger" onClick={onDelete} disabled={remove.isPending || ws.busy}>
                 {remove.isPending ? "Deleting…" : "Delete request"}
               </button>
@@ -222,7 +233,16 @@ export function RequestPage() {
       ) : (
         request.status !== "draft" && (
           <div className={styles.locked}>
-            This request is <strong>{request.status}</strong>, so the sheet is read-only.
+            {poolIsLive(pool) ? (
+              <>
+                This sheet is being <strong>{pool?.status === "funded" ? "funded by" : "crowdfunded through"}</strong> a community
+                pool, so it's read-only.
+              </>
+            ) : (
+              <>
+                This request is <strong>{request.status}</strong>, so the sheet is read-only.
+              </>
+            )}
           </div>
         )
       )}
@@ -237,9 +257,19 @@ export function RequestPage() {
         />
       )}
 
-      {versions.data && versions.data.length > 0 && (
-        <PaymentCard request={request} viewing={version} versions={versions.data} />
+      <MembersPanel
+        request={request}
+        members={members}
+        inviteToken={ws.query.data?.inviteToken ?? null}
+        meId={me?.id ?? ""}
+        nods={ws.query.data?.latestVersion?.nods ?? []}
+      />
+
+      {versions.data && versions.data.length > 0 && !(poolIsLive(pool) && request.status !== "draft") && (
+        <PaymentCard request={request} viewing={version} versions={versions.data} members={members} meId={me?.id ?? ""} />
       )}
+
+      <PoolPanel request={request} pool={pool} members={members} />
 
       <section className={styles.sheet}>
         <div className={styles.sheetHead}>
@@ -263,6 +293,7 @@ export function RequestPage() {
             items={version.items}
             totalCents={version.totalCents}
             editable={editable && !ws.busy}
+            baseline={lastItems.current}
             onQuantityChange={onQuantityChange}
             onRemove={onRemove}
           />

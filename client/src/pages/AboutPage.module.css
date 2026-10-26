@@ -1,4 +1,4 @@
-.page { max-width: 860px; margin: 0 auto; padding: 2.5rem 1rem 3rem; text-align: center; }
+.page { max-width: 960px; margin: 0 auto; padding: 2.5rem 1rem 1rem; text-align: center; min-height: calc(100vh - 9.5rem); display: flex; flex-direction: column; align-items: center; }
 .title {
   display: inline-block;
   margin: 0 0 2.75rem;
@@ -12,4 +12,4 @@
 .body strong { color: var(--text); }
 .brand { font-size: 1.25rem; font-weight: 700; color: var(--blue-800); }
 .highlight { font-size: 1.15rem; font-weight: 700; color: var(--blue-800); }
-.madeWith { margin: 4rem 0 0; color: var(--muted); }
+.madeWith { margin: auto 0 0; padding-top: 4rem; color: var(--muted); }

@@ -17,6 +17,11 @@ export function AboutPage() {
           before anything is charged.
         </p>
         <p>
+          And buying isn’t always a solo job. Pay on your own, <strong>split the bill with your group</strong>, or open
+          a <strong>community pool</strong> so neighbours, classmates or donors can chip in through PayPal. If the goal
+          isn’t met, everyone gets their money back.
+        </p>
+        <p>
           Our mission is to take procurement from “I need…” to a paid order in minutes. With{" "}
           <strong>PayPal</strong> handling checkout and <strong>AI</strong> doing the sourcing, we aim to make team
           purchasing <strong>fast, transparent and trustworthy for everyone.</strong>

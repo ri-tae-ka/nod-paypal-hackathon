@@ -1,4 +1,4 @@
-import type { GenerateResult, ProcurementRequest, RequestDetail, SearchResult, Version, VersionDiff, VersionSummary } from "../types/api";
+import type { GenerateResult, InvitePreview, ProcurementRequest, RequestDetail, SearchResult, Version, VersionDiff, VersionSummary } from "../types/api";
 import { api } from "./http";
 
 export const listRequests = () => api<{ requests: ProcurementRequest[] }>("/requests").then((r) => r.requests);
@@ -50,3 +50,17 @@ export const copyVersion = (id: string, n: number, body: { summary?: string; exp
 
 export const generateVersion = (id: string, body: { instruction?: string; expectedLatestVersion: number }) =>
   api<GenerateResult>(`/requests/${id}/generate`, { body });
+
+export const createInvite = (id: string) =>
+  api<{ inviteToken: string }>(`/requests/${id}/invite`, { method: "POST" }).then((r) => r.inviteToken);
+
+export const revokeInvite = (id: string) => api<void>(`/requests/${id}/invite`, { method: "DELETE" });
+
+export const previewInvite = (token: string) =>
+  api<{ invite: InvitePreview }>(`/requests/invites/${encodeURIComponent(token)}`).then((r) => r.invite);
+
+export const joinInvite = (token: string) =>
+  api<{ requestId: string }>(`/requests/invites/${encodeURIComponent(token)}/join`, { method: "POST" });
+
+export const removeMember = (id: string, userId: string) =>
+  api<void>(`/requests/${id}/members/${userId}`, { method: "DELETE" });

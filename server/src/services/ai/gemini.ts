@@ -40,6 +40,12 @@ interface GeminiResponse {
 
 async function upstreamError(response: Response): Promise<HttpError> {
   const text = await response.text().catch(() => "");
+  const isHtml = (response.headers.get("content-type") ?? "").includes("text/html") || /^\s*</.test(text);
+  if (isHtml) {
+    // Gemini only returns JSON; an HTML page means a proxy or firewall answered instead
+    console.error(`Gemini request was blocked (${response.status}): got an HTML page, likely from a network proxy or firewall.`);
+    return new HttpError(502, "The AI service can't be reached from this network.", "ai_unavailable");
+  }
   console.error(`Gemini responded ${response.status}: ${text.slice(0, 500)}`);
   if (response.status === 429) {
     return new HttpError(503, "The AI service is busy or over its free quota. Try again in a minute.", "ai_busy");

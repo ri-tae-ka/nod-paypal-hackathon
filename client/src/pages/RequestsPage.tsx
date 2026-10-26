@@ -1,12 +1,31 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { listRequests } from "../api/requests";
-import { StatusBadge } from "../components/StatusBadge";
-import { formatCents, formatDate } from "../lib/format";
+import { RequestsGrid } from "../components/RequestsGrid";
 import styles from "./RequestsPage.module.css";
 
 export function RequestsPage() {
   const requests = useQuery({ queryKey: ["requests"], queryFn: listRequests });
+  const [tab, setTab] = useState<"all" | "mine" | "group" | "pool">("all");
+
+  const all = requests.data ?? [];
+  const isGroup = (request: (typeof all)[number]) => request.memberCount > 1;
+  const isPool = (request: (typeof all)[number]) => !!request.poolStatus;
+  const kind = (r: (typeof all)[number]) => (isPool(r) ? "pool" : isGroup(r) ? "group" : "mine");
+  const counts = {
+    all: all.length,
+    mine: all.filter((r) => kind(r) === "mine").length,
+    group: all.filter((r) => kind(r) === "group").length,
+    pool: all.filter((r) => kind(r) === "pool").length,
+  };
+  const shown = all.filter((r) => tab === "all" || kind(r) === tab);
+  const tabs = [
+    ["all", "All"],
+    ["mine", "Solo"],
+    ["group", "Group"],
+    ["pool", "Pools"],
+  ] as const;
 
   return (
     <div className={styles.page}>
@@ -20,8 +39,25 @@ export function RequestsPage() {
         </Link>
       </div>
 
+      <div className={styles.tabs} role="tablist">
+        {tabs.map(([key, label]) => (
+          <button
+            key={key}
+            role="tab"
+            aria-selected={tab === key}
+            className={tab === key ? `${styles.tab} ${styles.tabActive}` : styles.tab}
+            onClick={() => setTab(key)}
+          >
+            {label} <span className={styles.count}>{counts[key]}</span>
+          </button>
+        ))}
+      </div>
+
       {requests.isPending && <p className="muted">Loading…</p>}
       {requests.error && <p className="error">{requests.error.message}</p>}
+      {requests.data && requests.data.length > 0 && shown.length === 0 && (
+        <p className="muted">{tab === "group" ? "No group requests yet. Open a request and invite people to make one." : "Nothing here."}</p>
+      )}
       {requests.data?.length === 0 && (
         <div className={styles.empty}>
           <p className="muted">No requests yet.</p>
@@ -30,23 +66,7 @@ export function RequestsPage() {
           </Link>
         </div>
       )}
-      <ul className={styles.list}>
-        {requests.data?.map((request) => (
-          <li key={request.id}>
-            <Link to={`/requests/${request.id}`} className={styles.item}>
-              <div className={styles.itemTop}>
-                <span className={styles.prompt}>{request.prompt}</span>
-                <StatusBadge status={request.status} />
-              </div>
-              <div className={styles.meta}>
-                <span>{request.latestVersion ? `v${request.latestVersion}` : "No sheet yet"}</span>
-                {request.budgetCents !== null && <span>Budget {formatCents(request.budgetCents)}</span>}
-                <span>{formatDate(request.createdAt)}</span>
-              </div>
-            </Link>
-          </li>
-        ))}
-      </ul>
+      {shown.length > 0 && <RequestsGrid requests={shown} />}
     </div>
   );
 }
