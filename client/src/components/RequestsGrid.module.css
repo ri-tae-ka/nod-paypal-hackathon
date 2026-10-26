@@ -1,0 +1,10 @@
+.wrapper { width: 100%; }
+.wrapper :global(.ag-cell) { display: flex; align-items: center; }
+.wrapper :global(.ag-right-aligned-cell) { justify-content: flex-end; }
+.row { cursor: pointer; }
+.prompt { font-weight: 600; line-height: 1.4; padding-top: 0.5rem; padding-bottom: 0.5rem; }
+.group { color: var(--primary); font-weight: 700; }
+.pool { color: var(--yellow-800); font-weight: 700; }
+.status { display: inline-flex; line-height: 1; }
+.wrapper :global(.ag-center-cols-viewport) { min-height: 0 !important; }
+.wrapper :global(.ag-layout-auto-height .ag-center-cols-container) { min-height: 0 !important; }
