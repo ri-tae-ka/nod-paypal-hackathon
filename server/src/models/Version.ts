@@ -40,6 +40,16 @@ const versionSchema = new Schema(
     totalCents: cents,
     // Incremented on every edit so stale AI results and stale approvals can be rejected
     revision: { type: Number, default: 0, min: 0 },
+    // Each member's nod on a specific revision; cleared by any edit. Approval is final once all have nodded.
+    nods: {
+      type: [
+        new Schema(
+          { userId: { type: Schema.Types.ObjectId, ref: "User", required: true }, revision: { type: Number, required: true }, at: { type: Date, default: Date.now } },
+          { _id: false },
+        ),
+      ],
+      default: [],
+    },
     approval: {
       approvedAt: Date,
       approvedRevision: Number,

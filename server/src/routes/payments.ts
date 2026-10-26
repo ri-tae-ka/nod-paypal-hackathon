@@ -18,6 +18,10 @@ export function createPaymentsRouter(jwtSecret: string, service: PaymentService)
     res.json({ payments: await service.listPayments(currentUserId(res), String(req.params.id)) });
   });
 
+  router.post("/requests/:id/cancel-payment", auth, async (req, res) => {
+    res.json(await service.cancelGroupPayment(currentUserId(res), String(req.params.id)));
+  });
+
   router.post("/payments/:orderId/capture", auth, async (req, res) => {
     const { orderId } = orderParams.parse(req.params);
     res.json({ payment: await service.capture(currentUserId(res), orderId) });

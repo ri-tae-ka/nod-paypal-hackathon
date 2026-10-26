@@ -2,7 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { diffVersions } from "../api/requests";
 import { formatCents } from "../lib/format";
-import type { DiffLine, VersionSummary } from "../types/api";
+import type { VersionSummary } from "../types/api";
+import { DiffGrid } from "./DiffGrid";
 import styles from "./VersionDiffPanel.module.css";
 
 interface Props {
@@ -19,8 +20,6 @@ function defaultAgainst(versions: VersionSummary[], viewing: number, latest: num
   const current = versions.find((v) => v.number === viewing);
   return current?.basedOnVersion ?? viewing - 1;
 }
-
-const qtyPrice = (line: DiffLine) => `${line.quantity} × ${formatCents(line.unitPriceCents)}`;
 
 export function VersionDiffPanel({ requestId, versions, viewing, latest, focus }: Props) {
   const [open, setOpen] = useState(false);
@@ -97,43 +96,7 @@ export function VersionDiffPanel({ requestId, versions, viewing, latest, focus }
                   {d.unchangedCount === 1 ? "item" : "items"}.
                 </p>
               ) : (
-                <ul className={styles.lines}>
-                  {d.added.map((line) => (
-                    <li key={`a-${line.channel3ProductId}`} className={styles.added}>
-                      <span className={styles.kind}>Added</span>
-                      <span className={styles.title}>{line.title}</span>
-                      <span className={styles.detail}>{qtyPrice(line)}</span>
-                      <span className={styles.amount}>+{formatCents(line.lineTotalCents)}</span>
-                    </li>
-                  ))}
-                  {d.removed.map((line) => (
-                    <li key={`r-${line.channel3ProductId}`} className={styles.removed}>
-                      <span className={styles.kind}>Removed</span>
-                      <span className={styles.title}>{line.title}</span>
-                      <span className={styles.detail}>{qtyPrice(line)}</span>
-                      <span className={styles.amount}>−{formatCents(line.lineTotalCents)}</span>
-                    </li>
-                  ))}
-                  {d.changed.map((line) => {
-                    const delta = line.lineTotalCents - line.before.lineTotalCents;
-                    const parts = [];
-                    if (line.quantity !== line.before.quantity) parts.push(`Qty ${line.before.quantity} → ${line.quantity}`);
-                    if (line.unitPriceCents !== line.before.unitPriceCents) {
-                      parts.push(`Price ${formatCents(line.before.unitPriceCents)} → ${formatCents(line.unitPriceCents)}`);
-                    }
-                    return (
-                      <li key={`c-${line.channel3ProductId}`} className={styles.changed}>
-                        <span className={styles.kind}>Changed</span>
-                        <span className={styles.title}>{line.title}</span>
-                        <span className={styles.detail}>{parts.join(" · ")}</span>
-                        <span className={styles.amount}>
-                          {delta >= 0 ? "+" : "−"}
-                          {formatCents(Math.abs(delta))}
-                        </span>
-                      </li>
-                    );
-                  })}
-                </ul>
+                <DiffGrid diff={d} />
               )}
               {d.unchangedCount > 0 && d.added.length + d.removed.length + d.changed.length > 0 && (
                 <p className="muted">

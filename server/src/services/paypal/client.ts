@@ -72,6 +72,8 @@ export interface PayPalClient {
   createOrder(body: CreateOrderBody, idempotencyKey: string): Promise<PayPalOrder>;
   captureOrder(orderId: string, idempotencyKey: string): Promise<PayPalOrder>;
   getOrder(orderId: string): Promise<PayPalOrder>;
+  /** Fully refunds a captured payment. */
+  refundCapture(captureId: string, idempotencyKey: string): Promise<{ id: string; status: string }>;
 }
 
 const unavailable = () => new HttpError(502, "PayPal is unavailable right now. Try again shortly.", "paypal_unavailable");
@@ -153,6 +155,11 @@ export function createPayPalClient(clientId: string, clientSecret: string, fetch
     captureOrder: (orderId, idempotencyKey) =>
       call("POST", `/v2/checkout/orders/${encodeURIComponent(orderId)}/capture`, {}, idempotencyKey),
     getOrder: (orderId) => call("GET", `/v2/checkout/orders/${encodeURIComponent(orderId)}`),
+    refundCapture: async (captureId, idempotencyKey) =>
+      (await call("POST", `/v2/payments/captures/${encodeURIComponent(captureId)}/refund`, {}, idempotencyKey)) as unknown as {
+        id: string;
+        status: string;
+      },
   };
 }
 

@@ -36,12 +36,27 @@ const generateBody = z.object({
   expectedLatestVersion: z.number().int().min(0),
 });
 
+const sharesBody = z.object({
+  shares: z.array(z.object({ userId: z.string(), amountCents: z.number().int().min(1) })).min(1).max(10),
+});
+const inviteParams = z.object({ token: z.string().regex(/^[A-Za-z0-9_-]{10,64}$/) });
+
 export function createRequestsRouter(jwtSecret: string, service: RequestService, agent: ProcurementAgent) {
   const router = Router();
   router.use(requireAuth(jwtSecret));
 
   router.post("/", async (req, res) => {
     res.status(201).json({ request: await service.createRequest(currentUserId(res), createRequestBody.parse(req.body)) });
+  });
+
+  router.get("/invites/:token", async (req, res) => {
+    const { token } = inviteParams.parse(req.params);
+    res.json({ invite: await service.previewInvite(currentUserId(res), token) });
+  });
+
+  router.post("/invites/:token/join", async (req, res) => {
+    const { token } = inviteParams.parse(req.params);
+    res.json(await service.joinByInvite(currentUserId(res), token));
   });
 
   router.get("/", async (_req, res) => {
@@ -86,6 +101,29 @@ export function createRequestsRouter(jwtSecret: string, service: RequestService,
     const { id, n } = versionParams.parse(req.params);
     const { expectedRevision } = z.object({ expectedRevision: revision }).parse(req.body);
     res.json(await service.approveVersion(currentUserId(res), id, n, expectedRevision));
+  });
+
+  router.delete("/:id/versions/:n/nod", async (req, res) => {
+    const { id, n } = versionParams.parse(req.params);
+    res.json({ version: await service.withdrawNod(currentUserId(res), id, n) });
+  });
+
+  router.post("/:id/invite", async (req, res) => {
+    res.status(201).json(await service.createInvite(currentUserId(res), req.params.id));
+  });
+
+  router.delete("/:id/invite", async (req, res) => {
+    await service.revokeInvite(currentUserId(res), req.params.id);
+    res.status(204).end();
+  });
+
+  router.delete("/:id/members/:userId", async (req, res) => {
+    await service.removeMember(currentUserId(res), req.params.id, req.params.userId);
+    res.status(204).end();
+  });
+
+  router.put("/:id/shares", async (req, res) => {
+    res.json(await service.setShares(currentUserId(res), req.params.id, sharesBody.parse(req.body).shares));
   });
 
   router.post("/:id/unapprove", async (req, res) => {

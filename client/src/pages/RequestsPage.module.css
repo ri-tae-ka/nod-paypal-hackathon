@@ -1,4 +1,4 @@
-.page { max-width: 960px; margin: 0 auto; }
+.page { max-width: 1200px; margin: 0 auto; }
 .header { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; margin-bottom: 1.25rem; }
 .header h1 { margin: 0 0 0.25rem; font-size: 1.6rem; }
 .header p { margin: 0; }
@@ -22,4 +22,11 @@
 .itemTop { display: flex; justify-content: space-between; gap: 1rem; align-items: baseline; }
 .prompt { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .meta { margin-top: 0.35rem; font-size: 0.85rem; color: var(--muted); display: flex; gap: 1rem; }
+.tabs { display: flex; gap: 0.25rem; margin-bottom: 1rem; border-bottom: 1px solid var(--border); }
+.tab { background: none; border: 0; border-bottom: 2px solid transparent; padding: 0.5rem 0.9rem; margin-bottom: -1px; font: inherit; font-weight: 600; color: var(--muted); cursor: pointer; }
+.tab:hover { color: var(--text); }
+.tabActive { color: var(--blue-700, var(--text)); border-bottom-color: var(--blue-600, currentColor); }
+.count { font-weight: 500; font-size: 0.8rem; background: var(--blue-50); border-radius: 999px; padding: 0.05rem 0.45rem; margin-left: 0.2rem; }
+.badges { display: flex; gap: 0.4rem; align-items: center; flex-shrink: 0; }
+.group { font-size: 0.75rem; font-weight: 600; padding: 0.15rem 0.55rem; border-radius: 999px; background: var(--blue-50); border: 1px solid var(--blue-200); }
 @media (max-width: 600px) { .header { flex-direction: column; } }

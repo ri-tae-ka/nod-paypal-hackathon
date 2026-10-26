@@ -17,7 +17,7 @@ try {
 // In production the server also serves the built React app, so client and API share one origin.
 const clientDist = fileURLToPath(new URL("../../client/dist", import.meta.url));
 const serveClient = env.NODE_ENV === "production" && existsSync(clientDist);
-const app = createApp(env, serveClient ? { staticDir: clientDist } : {});
+const app = createApp(env, { poolSweepMs: 60_000, ...(serveClient && { staticDir: clientDist }) });
 if (serveClient) console.log(`Serving client from ${clientDist}`);
 
 if (!env.CHANNEL3_API_KEY) {

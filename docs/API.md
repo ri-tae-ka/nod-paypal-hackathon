@@ -1,23 +1,16 @@
-# REST API reference
+# API reference
 
-Base path: `/api`. All request and response bodies are JSON.
+Everything lives under `/api` and speaks JSON. Amounts are whole cents in USD.
 
-**Authentication:** a session JWT in an `httpOnly` cookie, set by register or login. Every endpoint except health and auth requires it.
+You sign in with register or login, which sets a JWT in an `httpOnly` cookie. Every endpoint needs that cookie except health, auth and the public pool endpoints.
 
-**Money:** amounts are integer **cents** in USD.
-
-**Errors** use this shape:
+Errors look like this (`details` is only there sometimes):
 
 ```json
 { "error": { "code": "version_conflict", "message": "Human-readable message", "details": {} } }
 ```
 
-The `details` field is optional.
-
-**Concurrency:** edits are optimistic.
-
-- Line-item edits and approval send `expectedRevision`. Copy and AI generation send `expectedLatestVersion`.
-- A stale value returns `409`, so two tabs or the AI and a manual edit can't overwrite each other.
+Edits use optimistic locking. Line-item edits and approvals send `expectedRevision`, and copying a version or running the agent sends `expectedLatestVersion`. If the value is stale you get a `409`, so two tabs, or the agent and a manual edit, can't overwrite each other.
 
 ## Health
 
@@ -48,7 +41,52 @@ The `details` field is optional.
 | GET | `/requests` | | Lists your requests. |
 | GET | `/requests/:id` | | Returns a request with its latest version. |
 | DELETE | `/requests/:id` | | Deletes a draft or approved request with its versions. Paid requests can't be deleted. |
-| POST | `/requests/:id/unapprove` | | Returns an approved request to draft. |
+| POST | `/requests/:id/unapprove` | | Returns an approved request to draft (any member, before anyone has paid). |
+
+## Group Nod
+
+A request with only its owner is a solo request and behaves as before. The owner can invite others by link; every member can see and edit the sheet and run the agent.
+
+| Method | Path | Body | Description |
+| --- | --- | --- | --- |
+| POST | `/requests/:id/invite` | | Owner only. Creates or rotates the invite token and returns `{ inviteToken }`. |
+| DELETE | `/requests/:id/invite` | | Owner only. Revokes the invite link. |
+| GET | `/requests/invites/:token` | | Previews an invite: `{ invite: { requestId, prompt, ownerName, memberCount, status, alreadyMember } }`. |
+| POST | `/requests/invites/:token/join` | | Joins the group (draft requests only, at most 10 people). Clears existing nods. |
+| DELETE | `/requests/:id/members/:userId` | | The owner removes a member, or a member removes themselves. Draft only. |
+| DELETE | `/requests/:id/versions/:n/nod` | | Takes back your own nod. |
+| PUT | `/requests/:id/shares` | `{ shares: [{ userId, amountCents }] }` | Owner only, once approved. Sets custom shares: one per person, summing to the approved total. |
+| POST | `/requests/:id/cancel-payment` | | Owner only. Refunds captured shares, cancels open orders and reopens the draft. A failed refund returns `refund_failed` and changes nothing else; retry. |
+
+`GET /requests/:id` also returns `members` (`userId`, `displayName`, `role`, `nodded`, `shareCents`) and, for the owner, `inviteToken`. A version has `nods`, the user ids that have nodded on its current revision.
+
+`POST /requests/:id/versions/:n/approve` records your nod. The response has `finalized: false` until every member has nodded on the same revision; then the request becomes `approved` and shares are set to an equal split (leftover cents go to the first members). Any edit or new version clears all nods.
+
+## Community pool
+
+An approved **solo** request can be opened as a public, all-or-nothing pool. The goal is the approved version's total. While a pool is open, the request can't be unapproved, deleted or checked out normally.
+
+| Method | Path | Auth | Body | Description |
+| --- | --- | --- | --- | --- |
+| POST | `/requests/:id/pool` | owner | `{ story?, organizer?, deadline? }` | Opens a pool and returns it, with the public `token` and an AI-written `pitch` (`pitchByAi: false` when the fallback was used). `deadline` is an ISO date between 1 hour and 90 days away. |
+| POST | `/requests/:id/pool/cancel` | owner | | Cancels the pool, refunds every captured contribution through PayPal and returns the request to draft. |
+| GET | `/requests/:id/pool/contributions` | owner | | Lists the latest pool's contributions (up to 200), with their status. |
+| GET | `/pools/:token` | public | | The public view: the pool (with `goalCents`, `raisedCents`, `remainingCents` and `contributorCount`), the approved items and supporters. Never includes payer details. |
+| POST | `/pools/:token/contribute` | public | `{ amountCents, name?, anonymous?, message? }` | Creates a PayPal order for a pledge and returns its `approveUrl`. The amount must be at least $1 (or what's left, if less) and at most the remaining amount. |
+| POST | `/pools/:token/contributions/:orderId/capture` | public | | Captures the pledge after PayPal approval and verifies the amount. When the goal is reached the pool becomes `funded` and the request `paid`. Safe to retry. |
+
+`GET /requests/:id` returns `pool` (the latest pool, or `null`), and `GET /requests` returns `poolStatus` for requests with an active pool. The public write endpoints are limited to 30 calls per 15 minutes per IP. A server sweeper expires overdue pools every minute and refunds them in the same way as cancel.
+
+Pool errors:
+
+| Code | Status | Meaning |
+| --- | --- | --- |
+| `pool_open` | 409 | The action is blocked while a pool is open. |
+| `pool_exists` | 409 | The request already has an active pool. |
+| `pool_full` | 409 | Pledges already cover the goal. |
+| `pool_closed` | 409 | The pool is no longer accepting contributions; an uncaptured pledge is cancelled. |
+| `invalid_amount` | 400 | The pledge is out of range; `details` has `minCents` and `maxCents`. |
+| `refund_failed` | 502 | A refund failed. The pool stays open; retry the cancel. |
 
 ## Versions
 
@@ -86,11 +124,11 @@ Notes on `/generate`:
 
 | Method | Path | Description |
 | --- | --- | --- |
-| POST | `/requests/:id/checkout` | Creates a PayPal order for the approved version, or reuses the pending one. Returns the payment, including `approveUrl`, the PayPal page the buyer must be redirected to. |
-| POST | `/payments/:orderId/capture` | Captures the order after the buyer approves it, checks that the captured amount equals the approved total, then marks the request **paid**. Safe to retry. |
+| POST | `/requests/:id/checkout` | Creates a PayPal order for your share of the approved version (the full total for solo requests), or reuses the pending one. Returns the payment, including `approveUrl`, the PayPal page the buyer must be redirected to. |
+| POST | `/payments/:orderId/capture` | Captures the order after the buyer approves it, checks that the captured amount equals your share (the full total for solo requests), and marks the request **paid** once every share is captured. Safe to retry. |
 | GET | `/requests/:id/payments` | Lists payment attempts for a request. |
 
-A payment record has the fields `paypalOrderId`, `paypalCaptureId`, `amountCents`, `status`, `payer` and `capturedAt`. `status` is one of `created`, `capturing`, `completed`, `pending`, `failed` or `cancelled`.
+A payment record has the fields `paypalOrderId`, `paypalCaptureId`, `amountCents`, `status`, `payer` and `capturedAt`. `status` is one of `created`, `capturing`, `completed`, `pending`, `failed`, `cancelled` or `refunded`.
 
 Common payment errors:
 

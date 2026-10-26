@@ -1,5 +1,6 @@
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuthActions, useMe } from "../hooks/useAuth";
+import { NodLogo } from "./NodLogo";
 import styles from "./Layout.module.css";
 
 const navClass = ({ isActive }: { isActive: boolean }) =>
@@ -16,8 +17,7 @@ export function Layout() {
         <div className={styles.inner}>
           <div className={styles.left}>
             <Link to="/" className={styles.brand} aria-label="Nod home">
-              <img src="/favicon.svg" alt="" className={styles.mark} />
-              nod
+              <NodLogo className={styles.logo} />
             </Link>
             <span className={styles.sandbox}>PayPal Sandbox</span>
           </div>

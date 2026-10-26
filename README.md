@@ -2,121 +2,129 @@
 
 **Your agent shops. Your nod pays.**
 
-Nod turns a plain-English request into a paid order: an AI agent sources real products, and PayPal checkout charges only what you approved.
+You tell Nod what you need ("a home office for two engineers under $1,500"). An AI agent finds real products and puts them in a spreadsheet you can edit. When the sheet looks right, you approve it and pay with PayPal. The amount charged is the amount you approved, never anything else.
 
-Built for the **PayPal AI Hackathon**.
+You can pay on your own, split the cost with a group, or turn it into a community pool that anyone can chip in to.
 
-Describe what you need in plain English, for example *"set up a home office for two engineers under $1,500"*. An AI agent searches real products and builds an editable shopping sheet.
-
-You refine the sheet by editing cells or by telling the agent things like *"upgrade quality"* or *"cut 20%"*. Every change is saved as a new version. When you're happy, you approve one exact version and pay for it with **PayPal**.
-
-The amount charged is always the amount you approved.
-
-> Everything runs in the **PayPal Sandbox**. No real money moves.
-
----
+We built this for the PayPal AI Hackathon. Everything runs in the PayPal Sandbox, so no real money moves.
 
 ## Contents
 
-- [The problem](#the-problem)
-- [What it does](#what-it-does)
-- [How PayPal is used](#how-paypal-is-used)
-- [How AI is used](#how-ai-is-used)
-- [Tools and sponsor technologies](#tools-and-sponsor-technologies)
+- [Why we built it](#why-we-built-it)
+- [How it works](#how-it-works)
+- [Paying together: Group Nod](#paying-together-group-nod)
+- [Raising it together: community pools](#raising-it-together-community-pools)
+- [Where PayPal comes in](#where-paypal-comes-in)
+- [Where AI comes in](#where-ai-comes-in)
+- [Tools we used](#tools-we-used)
 - [Architecture](#architecture)
 - [Running it locally](#running-it-locally)
 - [Deploying to Render](#deploying-to-render)
 - [Trying the demo](#trying-the-demo)
-- [Testing](#testing)
+- [Type checking](#type-checking)
 - [Project structure](#project-structure)
-- [Security and safety](#security-and-safety)
-- [Limitations and next steps](#limitations-and-next-steps)
+- [Security](#security)
+- [What's missing](#whats-missing)
 
----
+## Why we built it
 
-## The problem
+Buying a bunch of things for a team, an event or a new flat usually goes like this. You open twenty tabs, copy prices into a spreadsheet, argue about the budget, and then someone pays and chases everyone else for their share.
 
-Buying a set of things for a team, an event or a new office is tedious. You:
+An AI agent could do the searching. But handing it your card is a bad idea: models make up products and prices, and you can't know in advance what it will charge.
 
-1. research products across many sites;
-2. copy prices into a spreadsheet;
-3. haggle over the budget;
-4. finally pay.
+So in Nod the AI does the legwork and you decide what gets paid:
 
-"Just let an AI buy it" is risky, because AI can invent products and prices, and you can't tell what it will charge.
+- Prices, stock and totals come from the product catalogue on the server. The model never sets a price.
+- Every change, whether from you or the agent, is saved as a new version you can compare with any other.
+- You approve one exact version, and checkout charges exactly that. If the sheet changes after you approve it, you have to approve again before you can pay.
 
-Nod keeps the AI doing the legwork, while **you stay in control of exactly what gets paid**:
+## How it works
 
-- **The AI proposes, deterministic code validates.** Prices, totals and stock always come from the product catalogue on the server, never from the model.
-- **Every change is a version.** You can compare any two versions and see what changed.
-- **You approve one exact version.** Checkout charges that version's total. If anything changes after approval, payment is blocked until you approve again.
+1. **Describe.** Write what you need and, optionally, a budget.
+2. **Generate.** The agent works out what you need, searches a live catalogue through Channel3, picks products and says why it chose each one.
+3. **Refine.** Change quantities, remove lines or add products in the AG Grid sheet. Or ask the agent: "upgrade quality", "cut 20%", "add a webcam".
+4. **Compare.** Pick any two versions and see what was added, removed or changed, and how the total moved.
+5. **Approve.** Approve the version you checked. The sheet is then locked until you unapprove it.
+6. **Pay.** You're sent to PayPal to approve the payment, then back to Nod. The server captures the payment and checks the captured amount before marking the request paid.
 
-## What it does
+You can also copy an old version forward as a new draft, see the payment history for each request, and delete requests. Paid requests are kept as a record.
 
-| Step | What happens |
+## Paying together: Group Nod
+
+A lot of shopping is shared, with housemates, a team or friends on a trip. Any request can become a group.
+
+The owner shares an invite link, and anyone with an account can join while the request is still a draft (up to 10 people). The owner can revoke the link or remove people.
+
+Everyone has to nod (approve) the same version. If anyone edits the sheet, makes a new version, or someone joins or leaves, all the nods are reset. Nobody pays for a sheet they didn't see.
+
+Once everyone has nodded, the total is split equally. The owner can change the split by percentage, as long as it still adds up to the total. Each person pays their own share through their own PayPal order. The request counts as paid once every share is in. If the owner cancels, any shares already paid are refunded through PayPal.
+
+A solo request is just a group of one, so it works the same way.
+
+## Raising it together: community pools
+
+Sometimes the people paying aren't a fixed group: tents for a scout troop, gloves and bags for a street clean-up, a starter kit for a solar co-op. For those, the owner of an approved solo request can open a **community pool**: a public page that anyone can chip in to.
+
+- **No account needed.** Contributors open the link and pay through PayPal as guests. They can leave their name and a short message, or chip in anonymously.
+- **Donors see what they're paying for.** The page shows the approved sheet, read-only. The goal is that sheet's total, and the sheet can't change while the pool is open.
+- **AI writes the pitch.** The organiser writes a line about why it matters, and Gemini turns it into a short pitch for the page. If Gemini isn't available, the page uses the organiser's own words and doesn't show the "summarised by AI" badge.
+- **Each contribution is a separate PayPal order.** The server won't accept a contribution larger than what's left. When the goal is reached, the pool is funded and the request is marked paid.
+- **All or nothing.** If the organiser cancels, or the deadline passes, everyone gets a PayPal refund and the request goes back to draft. A background job checks for overdue pools every minute. If a refund fails, the pool stays open so the refund can be retried.
+- **Accessible.** The progress bar and status messages work with screen readers, and the whole form can be used with a keyboard.
+
+## Where PayPal comes in
+
+PayPal is the last step, the one that has to be right. We use the REST APIs on `api-m.sandbox.paypal.com`, with an OAuth client-credentials token.
+
+**Orders v2**
+- Each order uses `intent: CAPTURE`, with every product as a line item and an `item_total` equal to the approved total.
+- The buyer approves the payment on PayPal's site through the `payer-action` link, and PayPal sends them back to Nod. The order is set to `PAY_NOW` with no shipping.
+- The server then captures the order and checks that the captured amount and currency match what was approved. Nothing is marked paid until that check passes.
+
+**Refunds (Payments v2)**
+- Cancelling a group payment or a pool refunds each captured payment with `POST /v2/payments/captures/{id}/refund`.
+
+**Retries and errors**
+- Every create, capture and refund call sends a `PayPal-Request-Id`, so a retry never charges or refunds twice. An order that's already captured is handled as a success.
+- If a card is declined, or the buyer hasn't approved the order yet, they're sent back to PayPal.
+- The approval is checked again at checkout and again before capture. If it changed in between, the payment is blocked.
+
+Each payment record keeps the PayPal order ID, capture ID, payer, amount and status, and the app shows all of them.
+
+## Where AI comes in
+
+The shopping agent uses Google Gemini (`gemini-2.5-flash` by default). Every Gemini call asks for structured JSON that matches a schema.
+
+1. **Plan.** Gemini reads the request, the budget, any instruction like "cut 20%", and the current sheet. It returns a list of needs. For each need it either keeps an existing line (maybe with a new quantity) or asks for a search, with a query and an optional price cap.
+2. **Search.** The server runs those searches against Channel3 in parallel and keeps up to 6 real products for each need.
+3. **Select.** Gemini picks one product per need and writes a one-line reason. It is asked to prefer products that are in stock, under the price cap, within budget and well rated. A rating counts for less when it comes from only a few reviews.
+4. **Check and save.** Plain code takes over. It rejects any product ID that didn't come from the search, looks up the real price and stock again, works out the totals and saves a new version.
+
+Gemini also writes the community pool pitch, from the organiser's note and the approved items.
+
+How we keep the model honest:
+
+- Every response is checked against a Zod schema and our own rules: no made-up product IDs, at most 8 searches, and sensible quantities. If a check fails, the errors go back to Gemini for one more try.
+- Product text from retailers is marked as untrusted in the prompt, to blunt prompt injection.
+- If the agent can't find something, it says so rather than picking something wrong.
+- Each user gets 20 AI runs and 50 searches a day. Search results are cached for 15 minutes.
+- The model sits behind a small `LlmClient` interface ([`server/src/services/ai/llm.ts`](server/src/services/ai/llm.ts)), so it can be swapped out.
+
+## Tools we used
+
+| Tool | What we used it for |
 | --- | --- |
-| **1. Describe** | Create a request with a plain-English prompt and an optional budget. |
-| **2. Generate** | The AI agent plans the needs, searches a live catalogue through **Channel3**, picks the best products and writes a reason for each pick. |
-| **3. Refine** | Edit quantities, remove lines or add products by hand in an **AG Grid** sheet. Or ask the agent to revise, for example *"upgrade quality"*, *"cut 20%"* or *"add a webcam"*. |
-| **4. Compare** | Every change creates a new version. The version timeline shows each version, and the diff panel shows added, removed and changed lines and the total delta. |
-| **5. Approve** | Approve the exact version you reviewed. The request is locked against further edits until you unapprove it. |
-| **6. Pay** | Check out with **PayPal**. You're redirected to the PayPal Sandbox, approve the payment and come back. The server captures the order and checks that the captured amount matches. |
+| **PayPal** (Developer + Sandbox) | Orders, captures and refunds for solo, group and pool payments. |
+| **Google Gemini** | Planning and picking products for the agent, and writing pool pitches. |
+| **Channel3** *(sponsor)* | Live product search and lookup, so every item and price is real. |
+| **AG Grid** *(sponsor)* | The editable sheet, the version comparison grid and the My requests list. When the agent changes the sheet, the cells that changed flash, so you can see what it did. |
+| **Postman** *(sponsor)* | Testing the REST API and the PayPal sandbox calls while we built them. |
+| **Render** *(sponsor)* | Hosting: the API and the React app run as one web service. |
+| **MongoDB + Mongoose** | Users, requests, versions, payments, pools and contributions. |
+| **Express 5, Node.js, TypeScript** | The API, with Zod validation, Helmet, rate limits and cookie-based JWT auth. |
+| **React 19, Vite, TanStack Query, React Router** | The front end. |
 
-Other features:
-
-- sign up and sign in;
-- a list of your requests;
-- deleting requests (paid requests are kept as a payment record);
-- copying any old version forward as a new draft;
-- payment history per request.
-
-## How PayPal is used
-
-PayPal is the final, trust-critical step: it turns an approved AI-built sheet into a real (sandbox) order.
-
-- **PayPal Orders API v2** (`api-m.sandbox.paypal.com`), via the REST API with OAuth 2.0 client credentials.
-  - **Create order:** `intent: CAPTURE`, with the full **line-item breakdown**: every product, its unit price and quantity, and an `item_total` that matches the approved version's total to the cent.
-  - **Redirect checkout:** the buyer approves on PayPal's own site using the `payer-action` link, then returns to `/requests/:id/checkout/return`. The order uses `user_action: PAY_NOW` and `shipping_preference: NO_SHIPPING`.
-  - **Capture order:** the server captures the order after the buyer approves it.
-- **Idempotency:** order creation and capture both send a `PayPal-Request-Id`. For creation it is derived from the version and approval timestamp, so retries never create duplicate orders. Capture is safe to retry, and `ORDER_ALREADY_CAPTURED` is handled.
-- **Amount guarantees:** these checks are done on the server, not the client.
-  - At checkout: the approval must still match the version's revision and total.
-  - At capture: the approval must not have changed since checkout started.
-  - After capture: the **captured amount and currency must equal the approved total** before the request is marked paid.
-- **Error handling:** declined payment methods (`INSTRUMENT_DECLINED`) and orders not yet approved send the buyer back to PayPal. Cancelled and failed payments are recorded.
-- **Payment record:** each payment stores the PayPal order ID, the capture ID, the payer's email and ID, the amount, the status and when it was captured. All of this is shown in the app.
-
-## How AI is used
-
-The agent is a **plan → search → select** pipeline powered by **Google Gemini** (`gemini-2.5-flash` by default). It uses Gemini's **structured JSON output**, with a response schema, at every step.
-
-1. **Plan (Gemini).** Gemini reads the request, the budget, any revision instruction and the current sheet. It returns a list of needs. Each need either **keeps** an existing line (possibly with a new quantity) or **searches** for a new product, with a shopping query and an optional per-unit price cap.
-2. **Search (Channel3).** The server runs the searches in parallel against Channel3's live product catalogue. It returns up to 6 candidates per need, with real prices, stock, ratings and retailer links.
-3. **Select (Gemini).** Gemini picks one candidate per need. It prefers items that fit, are in stock, are under the price cap and have a better *weighted* rating (ratings with few reviews are discounted). It keeps the total within budget and writes a short reason the buyer can see.
-4. **Validate and save (deterministic code).** The server accepts only product IDs that were actually returned by the search, then re-resolves each product from Channel3 to get its price and stock. It recalculates totals and saves the result as a new version, using the same rules as manual edits.
-
-Guardrails around the model:
-
-- **Every output is validated.** Each Gemini response is checked with a Zod schema and with business rules: for example, no invented product IDs, at most 8 searches per run, and valid quantities. If a check fails, the errors are sent back to Gemini for one retry.
-- **Prompt-injection hygiene.** Product titles and features from retailers are explicitly treated as untrusted data in the prompts.
-- **Honest output.** If the agent can't fill a need, it reports it as *unmet* instead of forcing a bad pick.
-- **Usage limits.** Each user has a daily limit on AI generations (default 20) and on Channel3 searches (default 50). Search results are cached for 15 minutes.
-- **Swappable model.** The LLM sits behind a small `LlmClient` interface ([`server/src/services/ai/llm.ts`](server/src/services/ai/llm.ts)), so the model can be changed without touching the agent.
-
-## Tools and sponsor technologies
-
-| Tool | Role in the project |
-| --- | --- |
-| **PayPal Orders v2** (Sandbox) | Creates, approves and captures orders for the exact approved version. |
-| **Google Gemini** (`gemini-2.5-flash`) | The procurement agent's planning and selection steps, with structured JSON output. |
-| **Channel3** *(sponsor)* | Live product catalogue search and product lookup, so every item, price and stock level is real. |
-| **AG Grid** *(sponsor)* | The editable procurement sheet: inline quantity edits, product images, ratings, availability, line totals and row actions. |
-| **MongoDB + Mongoose** | Stores users, requests, versions and payments. |
-| **Express 5, Node.js, TypeScript** | The REST API, with Zod validation, Helmet, rate limiting and JWT auth in httpOnly cookies. |
-| **React 19, Vite, TanStack Query, React Router** | The single-page client. |
-| **Vitest + Supertest** | Server test suite. PayPal, Channel3 and Gemini are all faked in tests. |
-
-The AI coding assistant **GitHub Copilot** was also used during development.
+We also used GitHub Copilot while writing the code.
 
 ## Architecture
 
@@ -124,32 +132,36 @@ The AI coding assistant **GitHub Copilot** was also used during development.
 flowchart LR
   subgraph Browser
     UI["React + AG Grid<br/>(Vite)"]
+    Guest["Public pool page"]
   end
 
   subgraph Server["Express API (Node + TypeScript)"]
     Auth["Auth<br/>JWT cookie"]
-    Req["Request &amp; version service<br/>(prices, totals, diffs, approval)"]
-    Agent["Procurement agent<br/>plan → search → select"]
+    Req["Requests &amp; versions<br/>(prices, totals, diffs, approval)"]
+    Agent["Shopping agent<br/>plan → search → select"]
     Search["Product search<br/>cache + daily cap"]
-    Pay["Payment service<br/>create / capture / verify"]
+    Pay["Payments<br/>create / capture / refund"]
+    Pools["Pools<br/>pledges, funding, expiry"]
   end
 
   DB[(MongoDB)]
-  Gemini["Google Gemini<br/>structured JSON"]
-  C3["Channel3<br/>product catalogue"]
-  PP["PayPal Orders v2<br/>Sandbox"]
+  Gemini["Google Gemini"]
+  C3["Channel3"]
+  PP["PayPal Sandbox"]
 
-  UI -- "/api (same-origin proxy)" --> Auth & Req & Agent & Pay
+  UI -- "/api" --> Auth & Req & Agent & Pay & Pools
+  Guest -- "/api/pools" --> Pools
   Agent --> Gemini
   Agent --> Search
+  Pools --> Gemini
   Req --> Search
   Search --> C3
   Agent --> Req
   Req --> DB
   Pay --> DB
+  Pools --> DB
   Pay --> PP
-  UI -. "redirect to approve" .-> PP
-  PP -. "return_url" .-> UI
+  Pools --> PP
 ```
 
 ### Request lifecycle
@@ -157,65 +169,70 @@ flowchart LR
 ```mermaid
 stateDiagram-v2
   [*] --> draft: create request
-  draft --> draft: AI generate / manual edit (new version)
+  draft --> draft: AI or manual edit (new version)
   draft --> approved: approve version N
   approved --> draft: unapprove
   approved --> paid: PayPal capture verified
+  approved --> pooling: open community pool
+  pooling --> paid: goal reached
+  pooling --> draft: cancelled or expired (everyone refunded)
   paid --> [*]
 ```
 
-### Data model
+`pooling` isn't stored as its own status. The request stays `approved` and locked while its pool is open.
 
-| Collection | Key fields |
+### Data
+
+| Collection | Main fields |
 | --- | --- |
 | `users` | email, displayName, passwordHash (bcrypt) |
-| `procurementrequests` | prompt, budgetCents, status (`draft` / `approved` / `paid`), latestVersion, approvedVersion |
-| `versions` | number, basedOnVersion, instruction, summary, items (a snapshot of each product: price, stock, rating, retailer link, quantity, rationale), totalCents, revision, approval |
-| `payments` | paypalOrderId, paypalCaptureId, amountCents, status, payer, capturedAt, versionNumber, approvedRevision |
+| `procurementrequests` | prompt, budgetCents, status, latestVersion, approvedVersion, members, shares |
+| `versions` | number, basedOnVersion, instruction, items (price, stock, rating, link, quantity, reason), totalCents, revision, approval, nods |
+| `payments` | paypalOrderId, paypalCaptureId, amountCents, status, payer, capturedAt |
+| `pools` | requestId, token, goalCents, story, pitch, deadline, status |
+| `contributions` | poolId, name, message, amountCents, paypalOrderId, paypalCaptureId, status, refundId |
 
-Money is always stored as **integer cents**. Each version has a `revision` counter, so stale edits and stale approvals are rejected; this is optimistic concurrency.
+Money is always stored as whole cents. Each version has a `revision` number, so an edit or approval made against an out-of-date sheet is rejected.
 
-The full endpoint list is in [docs/API.md](docs/API.md).
+The full list of endpoints is in [docs/API.md](docs/API.md).
 
 ## Running it locally
 
-### Prerequisites
+You'll need:
 
-- **Node.js 22 or newer.** It was developed on Node 24. The server scripts use `--env-file-if-exists`.
-- **MongoDB:** a local `mongod`, or a free MongoDB Atlas cluster.
-- API credentials, all of which have free tiers:
-  - a **PayPal Developer** sandbox REST app (client ID and secret): [developer.paypal.com](https://developer.paypal.com) → Apps & Credentials → Sandbox.
-  - a **Gemini** API key: [aistudio.google.com/apikey](https://aistudio.google.com/apikey).
-  - a **Channel3** API key: [trychannel3.com](https://trychannel3.com).
+- Node.js 22 or newer (we used 24)
+- MongoDB, either a local `mongod` or a free Atlas cluster
+- free keys for:
+  - a PayPal sandbox REST app ([developer.paypal.com](https://developer.paypal.com) → Apps & Credentials)
+  - Gemini ([aistudio.google.com/apikey](https://aistudio.google.com/apikey))
+  - Channel3 ([trychannel3.com](https://trychannel3.com))
 
-The server starts without the three API keys, but those features return `503` until the matching key is set.
+The server starts without the keys. Features that need a missing key return `503`.
 
-### 1. Server
+### Server
 
 ```bash
 cd server
 npm install
-cp env.sample .env      # then fill in the values
+cp env.sample .env      # fill in the values
 npm run dev             # http://localhost:4000
 ```
 
-Environment variables (see [`server/env.sample`](server/env.sample)):
-
-| Variable | Required | Description |
+| Variable | Required | Notes |
 | --- | --- | --- |
-| `MONGODB_URI` | yes | For example `mongodb://127.0.0.1:27017/procurement_desk`, or an Atlas `mongodb+srv://…` URI. |
-| `JWT_SECRET` | yes | 32 or more random characters, used to sign session cookies. |
-| `CLIENT_ORIGIN` | no | Defaults to `RENDER_EXTERNAL_URL` on Render, otherwise `http://localhost:5173`. Used for CORS and PayPal's return and cancel URLs. |
-| `PORT` | no | Defaults to `4000`. |
-| `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET` | for checkout | Sandbox REST app credentials. |
-| `GEMINI_API_KEY` | for AI | Gemini API key. |
-| `GEMINI_MODEL` | no | Defaults to `gemini-2.5-flash`. The model must support JSON output with a response schema. |
-| `CHANNEL3_API_KEY` | for search | Channel3 API key. |
-| `AI_DAILY_GENERATION_LIMIT` | no | AI generations per user per UTC day. Default 20. |
-| `CHANNEL3_DAILY_SEARCH_LIMIT` | no | Channel3 calls per user per UTC day. Default 50; cache hits are free. |
-| `BCRYPT_ROUNDS` | no | Defaults to 12. |
+| `MONGODB_URI` | yes | e.g. `mongodb://127.0.0.1:27017/procurement_desk` |
+| `JWT_SECRET` | yes | 32+ random characters |
+| `CLIENT_ORIGIN` | no | Used for CORS and PayPal return URLs. On Render it defaults to `RENDER_EXTERNAL_URL`, and locally to `http://localhost:5173`. |
+| `PORT` | no | default `4000` |
+| `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET` | for payments | sandbox app credentials |
+| `GEMINI_API_KEY` | for AI | |
+| `GEMINI_MODEL` | no | default `gemini-2.5-flash`; it must support JSON schema output |
+| `CHANNEL3_API_KEY` | for search | |
+| `AI_DAILY_GENERATION_LIMIT` | no | default 20 per user per day |
+| `CHANNEL3_DAILY_SEARCH_LIMIT` | no | default 50 per user per day (cache hits are free) |
+| `BCRYPT_ROUNDS` | no | default 12 |
 
-### 2. Client
+### Client
 
 ```bash
 cd client
@@ -223,118 +240,83 @@ npm install
 npm run dev             # http://localhost:5173
 ```
 
-In development, Vite proxies `/api` to `http://localhost:4000`, so the httpOnly session cookie is same-origin.
+Vite forwards `/api` to the server, so the session cookie works without any CORS setup.
 
 ### Production build
 
-From the repository root:
-
 ```bash
-npm run build                   # installs and builds client/ and server/
-NODE_ENV=production npm start   # serves the API and client/dist on one port
+npm run build                   # builds client and server
+NODE_ENV=production npm start   # one process serves the API and the app
 ```
-
-In production the Express server also serves the built React app, so the app and the API share one origin. Client-side routes such as `/requests/:id` fall back to `index.html`, and unknown `/api/*` routes still return JSON 404s.
 
 ## Deploying to Render
 
-The app deploys as **one Render web service**. One origin keeps the `sameSite: lax` session cookie working without cross-site cookie or CORS changes. [`render.yaml`](render.yaml) is a Render Blueprint for this setup.
+Nod runs as a single Render web service, so the app and the API share one origin and the session cookie just works. [`render.yaml`](render.yaml) sets it up.
 
-1. Create a free MongoDB Atlas cluster. Under **Network Access**, allow `0.0.0.0/0`, because Render's free tier has no fixed outbound IPs. Copy the connection string, ending in `/procurement_desk`.
-2. Push this repository to GitHub.
-3. In Render, choose **New → Blueprint** and select the repository. Render reads `render.yaml`, generates `JWT_SECRET`, and asks for the secret values:
+1. Create a free MongoDB Atlas cluster and allow access from `0.0.0.0/0`. Render's free tier has no fixed outbound IPs.
+2. Push the repo to GitHub.
+3. In Render, choose **New → Blueprint** and pick the repo. Render generates `JWT_SECRET` and asks for `MONGODB_URI`, `CHANNEL3_API_KEY`, `GEMINI_API_KEY`, `PAYPAL_CLIENT_ID` and `PAYPAL_CLIENT_SECRET`.
+4. Deploy. Render health-checks `/api/health`.
 
-   | Variable | Value |
-   | --- | --- |
-   | `MONGODB_URI` | Atlas connection string |
-   | `CHANNEL3_API_KEY` | Channel3 key |
-   | `GEMINI_API_KEY` | Gemini key |
-   | `PAYPAL_CLIENT_ID` / `PAYPAL_CLIENT_SECRET` | PayPal **Sandbox** app credentials |
-
-4. Deploy. The build runs `npm run build`, the service starts with `npm start`, and Render health-checks `/api/health`.
-
-`CLIENT_ORIGIN` can stay unset: it defaults to Render's `RENDER_EXTERNAL_URL`, which is the URL PayPal sends the buyer back to. Set it only if you add a custom domain.
-
-The free tier sleeps after 15 minutes without traffic, so the first request after that takes up to a minute.
+You only need to set `CLIENT_ORIGIN` if you use a custom domain. On the free tier the service sleeps after 15 minutes without traffic, so the first request afterwards can take up to a minute.
 
 ## Trying the demo
 
-1. Open http://localhost:5173 and **sign up**.
-2. Go to **My requests → New request**. Enter, for example, *"Home office setup for two remote engineers: monitors, keyboards, mice and desk lamps"*, with a budget of `1500`.
-3. Click **Generate sheet**. The agent builds version 1, with a reason for each pick.
-4. Try a revision: ask *"cut 20%"* or *"upgrade quality"*. Or edit a quantity in the grid, or add a product with **Add product**.
-5. Open the **version timeline** to compare versions and see the diff.
-6. **Approve** the version you want, then click **Pay with PayPal**.
-7. Log in with a **PayPal Sandbox personal (buyer) account**. You can create one in the developer dashboard; use a **US** account. Approve the payment.
-8. You're redirected back. The request is now **Paid**, and the card shows the PayPal order ID, capture ID and payer.
+1. Sign up, then go to **My requests → New request**.
+2. Try something like *"Home office for two remote engineers: monitors, keyboards, mice and desk lamps"*, with a budget of 1500.
+3. Click **Generate sheet**, then play with it. Ask for "cut 20%", change a quantity, or add a product.
+4. Compare two versions to see what changed.
+5. Approve a version and click **Pay with PayPal**. Log in with a sandbox personal account (US works best) and approve the payment.
+6. Back in Nod, the request shows as paid, with the PayPal order and capture IDs.
 
-## Testing
+**Group:** before approving, click **Invite people** and open the link while signed in as a second user. Both of you nod, adjust the split if you like, and each pay your own share.
+
+**Pool:** approve a solo request and click **Open a community pool** instead of paying. Add a line about why it matters, open the pool and copy the link. Open the link in a private window, which needs no sign-in, and chip in with a sandbox account. **Cancel & refund everyone** sends the money back.
+
+## Type checking
 
 ```bash
-cd server
-npm test            # Vitest: 91 tests
-npm run typecheck
-
-cd ../client
-npm run typecheck
+cd server && npm run typecheck
+cd ../client && npm run typecheck
 ```
-
-The server tests cover:
-
-- authentication;
-- product search, including caching and the daily cap;
-- the request and version service: edits, revisions, diffs, approval and request deletion;
-- the AI agent, with a fake LLM: validation, retries, unmet needs and budget context;
-- payments, with a fake PayPal client: idempotency, approval drift, declined payments and amount mismatch.
-
-None of these tests call external services.
 
 ## Project structure
 
 ```text
-.
-├── client/                    React + Vite single-page app
-│   └── src/
-│       ├── api/               typed fetch wrappers for the REST API
-│       ├── components/        SheetGrid (AG Grid), AgentPanel, VersionTimeline,
-│       │                      VersionDiffPanel, PaymentCard, AddProductDrawer, …
-│       ├── pages/             Home, About, Login, Requests, NewRequest,
-│       │                      Request (workspace), CheckoutReturn
-│       └── assets/            illustrations and tech logos
-├── server/                    Express + TypeScript API
-│   └── src/
-│       ├── config/            env validation (Zod), Mongo connection
-│       ├── models/            User, ProcurementRequest, Version, Payment
-│       ├── routes/            auth, products, requests, payments, health
-│       ├── services/
-│       │   ├── ai/            LlmClient interface + Gemini implementation
-│       │   ├── channel3/      Channel3 client + product mapper
-│       │   ├── paypal/        PayPal Orders v2 client (OAuth, idempotency)
-│       │   ├── procurementAgent.ts   plan → search → select pipeline
-│       │   ├── requestService.ts     versions, totals, diffs, approval
-│       │   └── paymentService.ts     checkout, capture, verification
-│       └── *.test.ts          Vitest suites
-├── docs/
-│   └── API.md                 REST endpoint reference
-├── package.json               root build/start scripts used by Render
-└── render.yaml                Render Blueprint (one web service)
+client/src/
+  api/          fetch wrappers for the API
+  components/   SheetGrid, DiffGrid, RequestsGrid (AG Grid), AgentPanel,
+                PaymentCard, MembersPanel, PoolPanel, …
+  pages/        Home, About, Requests, Request, Join, Pool (public), …
+server/src/
+  models/       User, ProcurementRequest, Version, Payment, Pool, Contribution
+  routes/       auth, products, requests, payments, pools, health
+  services/
+    ai/                 LlmClient + Gemini
+    channel3/           Channel3 client
+    paypal/             PayPal client (OAuth, orders, refunds)
+    procurementAgent.ts the shopping agent
+    requestService.ts   versions, totals, diffs, approval
+    paymentService.ts   checkout, capture, group shares
+    poolService.ts      community pools
+docs/API.md     endpoint reference
+render.yaml     Render Blueprint
 ```
 
-## Security and safety
+## Security
 
-- Passwords are hashed with bcrypt. Sessions are JWTs in `httpOnly`, `SameSite` cookies.
-- Helmet, strict CORS (`CLIENT_ORIGIN` only), a 100 KB JSON body limit, and rate limits on login and registration.
-- Every request body is validated with Zod. Every query is scoped to the signed-in user.
-- API keys stay on the server. The browser never talks to Gemini, Channel3 or the PayPal REST API directly.
-- Prices are never taken from the client or the model, only from Channel3 lookups on the server.
-- The payment amount is checked three times: at checkout, before capture and after capture.
+- Passwords are hashed with bcrypt. Sessions are JWTs in `httpOnly` cookies.
+- The API uses Helmet, strict CORS, a 100 KB body limit, and rate limits on login, sign-up and the public pool endpoints.
+- Every request body is validated with Zod, and every query is scoped to the signed-in user.
+- API keys never leave the server, and prices never come from the browser or the model.
+- Public pool pages never show contributors' emails.
 
-## Limitations and next steps
+## What's missing
 
-- **Sandbox only:** USD only, and no shipping or tax calculation.
-- **Payment, not purchasing.** The PayPal payment represents paying for the approved sheet. The app doesn't place orders with the individual retailers. Each line links to its retailer.
-- **Possible next steps:**
-  - multi-approver workflows, for example a manager approval step;
-  - PayPal payouts or invoicing for reimbursements;
-  - webhooks for asynchronous capture states;
-  - more AI tools, such as price-drop watching or vendor comparison.
+- The app runs in the sandbox only, takes USD only, and doesn't handle shipping or tax.
+- Nod collects the payment for the approved sheet but doesn't place orders with the retailers. Each line links to the retailer's product page.
+- Things we'd add next:
+  - payment reminders and email invites for groups;
+  - PayPal webhooks for payments that settle later;
+  - Payouts, so a funded pool can pay the organiser directly;
+  - price-drop alerts from the agent.

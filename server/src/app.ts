@@ -8,6 +8,7 @@ import { errorHandler, notFoundHandler } from "./middleware/errorHandler.js";
 import { type AuthRateLimits, createAuthRouter } from "./routes/auth.js";
 import { healthRouter } from "./routes/health.js";
 import { createPaymentsRouter } from "./routes/payments.js";
+import { type PoolRateLimits, createPoolsRouter } from "./routes/pools.js";
 import { createProductsRouter } from "./routes/products.js";
 import { createRequestsRouter } from "./routes/requests.js";
 import type { LlmClient } from "./services/ai/llm.js";
@@ -15,6 +16,7 @@ import { createGeminiClient } from "./services/ai/gemini.js";
 import { createChannel3Client } from "./services/channel3/client.js";
 import { createPaymentService } from "./services/paymentService.js";
 import { type PayPalClient, createPayPalClient } from "./services/paypal/client.js";
+import { createPoolService } from "./services/poolService.js";
 import { createProcurementAgent } from "./services/procurementAgent.js";
 import { type ProductSearchService, createProductSearchService } from "./services/productSearch.js";
 import { createRequestService } from "./services/requestService.js";
@@ -40,6 +42,9 @@ export interface AppOptions {
   llm?: LlmClient | null;
   /** Pass null to run without payments; omit to build a PayPal Sandbox client from config. */
   paypal?: PayPalClient | null;
+  poolRateLimits?: PoolRateLimits;
+  /** How often to refund and close pools past their deadline; off when unset (tests call expireDue directly). */
+  poolSweepMs?: number;
   /** Built client (client/dist) to serve from the same origin as the API. */
   staticDir?: string;
 }
@@ -73,6 +78,11 @@ export function createApp(config: AppConfig, options: AppOptions = {}) {
         ? createPayPalClient(config.PAYPAL_CLIENT_ID, config.PAYPAL_CLIENT_SECRET)
         : null;
   const payments = createPaymentService({ paypal, clientOrigin: config.CLIENT_ORIGIN });
+  const pools = createPoolService({ paypal, llm, clientOrigin: config.CLIENT_ORIGIN });
+  if (options.poolSweepMs) {
+    const sweep = () => pools.expireDue().catch((error) => console.warn("Pool sweep failed:", error));
+    setInterval(sweep, options.poolSweepMs).unref();
+  }
 
   const app = express();
   app.disable("x-powered-by");
@@ -96,6 +106,7 @@ export function createApp(config: AppConfig, options: AppOptions = {}) {
   app.use("/api/products", createProductsRouter(config.JWT_SECRET, productSearch));
   app.use("/api/requests", createRequestsRouter(config.JWT_SECRET, requests, agent));
   app.use("/api", createPaymentsRouter(config.JWT_SECRET, payments));
+  app.use("/api", createPoolsRouter(config.JWT_SECRET, pools, options.poolRateLimits));
 
   if (options.staticDir) {
     const staticDir = options.staticDir;
